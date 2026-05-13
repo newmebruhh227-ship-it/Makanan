@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dapur Super Mama</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #FF5E62; --glass: rgba(0, 0, 0, 0.85); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Outfit', sans-serif; margin: 0; background: #000; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        .bg-chef { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800'); background-size: cover; background-position: center; z-index: -1; }
+        #app-container { width: 100%; max-width: 450px; height: 100vh; position: relative; background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px); overflow: hidden; }
+        .page { position: absolute; width: 100%; height: 100%; padding: 20px; transition: all 0.4s ease-in-out; overflow-y: auto; opacity: 0; transform: scale(0.95); pointer-events: none; }
+        .page.active { opacity: 1; transform: scale(1); pointer-events: all; }
+        header { color: white; text-align: center; margin-bottom: 25px; padding-top: 10px; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 80px; }
+        .menu-card { background: var(--glass); border-radius: 18px; padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); color: white; text-align: center; }
+        .menu-card span { font-size: 35px; }
+        .recipe-item { background: white; border-radius: 20px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .recipe-img { width: 100%; height: 180px; object-fit: cover; }
+        .recipe-info { padding: 15px; }
+        .recipe-name { font-weight: 700; color: var(--primary); font-size: 18px; margin-bottom: 5px; display: block; }
+        .recipe-desc { font-size: 13px; color: #444; line-height: 1.5; }
+        .btn-back { background: white; color: black; border: none; padding: 10px 25px; border-radius: 50px; font-weight: 700; margin-bottom: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .music-btn { position: fixed; bottom: 20px; right: 20px; background: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 100; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+
+<div class="bg-chef"></div>
+<audio id="bgMusic" loop><source src="https://www.bensound.com/bensound-music/bensound-buddy.mp3" type="audio/mpeg"></audio>
+<div class="music-btn" onclick="toggleMusic()" id="musicIcon">🔇</div>
+
+<div id="app-container">
+    <div class="page active" id="home">
+        <header><h1>Menu Masakan Rumahan</h1><p style="color: #ccc;">90 Resep Spesial & Lengkap</p></header>
+        <div class="menu-grid" id="main-menu"></div>
+    </div>
+    <div class="page" id="detail">
+        <button class="btn-back" onclick="closeMenu()">⬅ Kembali</button>
+        <h2 id="cat-title" style="color: white; margin-bottom: 20px;">Kategori</h2>
+        <div id="recipe-list"></div>
+    </div>
+</div>
+
+<script>
+    const recipes = {
+        ayam: { t: "10 Olahan Ayam", v: [
+            {n: "Ayam Goreng Mentega", i: "Ayam, Mentega, Kecap Inggris, Bawang Bombay.", img: "Ayam mentega.jpg"},
+            {n: "Ayam Rica Kemangi", i: "Ayam, Cabai, Kemangi, Jahe, Serai.", img: "Ayam kemangi.jpg"},
+            {n: "Ayam Bakar Madu", i: "Ayam, Madu, Kecap Manis, Mentega.", img: "Ayam bakar madu.jpg"},
+            {n: "Opor Ayam Kuning", i: "Ayam, Santan, Kunyit, Salam, Lengkuas.", img: "Opor ayam.jpg"},
+            {n: "Ayam Kecap Pedas", i: "Ayam, Kecap, Cabai Rawit, Bawang Merah.", img: "Ayam kecap.jpg"},
+            {n: "Ayam Kuluyuk", i: "Fillet Ayam, Saus Tomat, Nanas, Paprika.", img: "Ayam kuluyuk.jpg"},
+            {n: "Semur Ayam Kentang", i: "Ayam, Kentang, Kecap, Pala, Kayu Manis.", img: "Semur ayam.jpg"},
+            {n: "Ayam Goreng Kalasan", i: "Ayam, Air Kelapa, Lengkuas, Bumbu Halus.", img: "Ayam kalasan.jpg"},
+            {n: "Pepes Ayam", i: "Ayam, Daun Kemangi, Tomat, Daun Pisang.", img: "Pepes ayam.jpg"},
+            {n: "Soto Ayam Spesial", i: "Ayam, Kunyit, Soun, Telur, Seledri.", img: "Soto ayam.jpg"}
+        ]},
+        ikan: { t: "10 Olahan Ikan", v: [
+            {n: "Nila Bakar Bumbu Padang", i: "Ikan Nila, Santan, Cabai, Kunyit, Jahe.", img: "Nila bakar.jpg"},
+            {n: "Patin Asam Pedas", i: "Ikan Patin, Air Asam Jawa, Cabai, Nanas.", img: "Patin asam pedas.jpg"},
+            {n: "Bawal Goreng Kering", i: "Ikan Bawal, Bawang Putih, Kunyit, Garam.", img: "Bawal goreng.jpg"},
+            {n: "Pindang Patin Palembang", i: "Ikan Patin, Serai, Nanas, Terasi, Kemangi.", img: "Patin asam pedas.jpg"},
+            {n: "Nila Goreng Terbang", i: "Ikan Nila, Tepung Maizena, Saus Sambal.", img: "Nila goreng.jpg"},
+            {n: "Mangut Ikan Pari/Nila", i: "Ikan, Santan, Cabai Hijau, Kencur.", img: "Mangut nila.jpg"},
+            {n: "Tim Ikan Bawal", i: "Ikan Bawal, Jahe, Kecap Asin, Daun Bawang.", img: "Tim bawal.jpg"},
+            {n: "Ikan Patin Bakar Bambu", i: "Ikan Patin, Bumbu Kuning, Daun Pisang.", img: "Patin bakar.jpg"},
+            {n: "Gulai Kepala Ikan", i: "Ikan, Santan, Asam Kandis, Daun Ruku-ruku.", img: "Gulai kepala ikan.jpg"},
+            {n: "Pesmol Nila", i: "Ikan Nila, Kemiri, Kunyit, Cuka, Cabai Rawit Utuh.", img: "Pesmol nila.jpg"}
+        ]},
+        cumi: { t: "10 Olahan Cumi", v: [
+            {n: "Cumi Saus Padang", i: "Cumi, Saus Sambal, Saus Tomat, Saus Tiram.", img: "Cumi saos padang.jpg"},
+            {n: "Cumi Goreng Tepung", i: "Cumi, Tepung Terigu, Tepung Maizena, Lada.", img: "Cumi krispi.jpg"},
+            {n: "Cumi Hitam Manis", i: "Cumi (tinta jangan dibuang), Bawang Putih, Cabai.", img: "Cumi hitam.jpg"},
+            {n: "Cumi Asin Cabai Hijau", i: "Cumi Asin, Cabai Hijau Besar, Tomat Hijau.", img: "Cumi asin.jpg"},
+            {n: "Tumis Cumi Pelangi", i: "Cumi, Jagung Muda, Wortel, Buncis.", img: "Tumis cumi.jpg"},
+            {n: "Cumi Bakar Kecap", i: "Cumi Besar, Kecap Manis, Saus Sambal, Mentega.", img: "Cumi bakar.jpg"},
+            {n: "Cumi Sambal Matah", i: "Cumi Goreng, Bawang Merah, Serai, Cabai Rawit.", img: "Cumi sambal matah.jpg"},
+            {n: "Gulai Cumi Isi Tahu", i: "Cumi, Tahu Halus, Santan, Daun Jeruk.", img: "Cumi tahu.jpg"},
+            {n: "Cumi Crispy Saus Telur Asin", i: "Cumi, Tepung, Kuning Telur Asin, Susu Cair.", img: "Cumi endok.jpg"},
+            {n: "Oseng Cumi Pete", i: "Cumi Asin, Pete, Cabai Rawit, Gula Merah.", img: "Cumi petai.jpg"}
+        ]},
+        sapi: { t: "10 Olahan Daging Sapi", v: [
+            {n: "Rendang Daging Sapi", i: "Daging Sapi, Santan, Bumbu Rendang Lengkap.", img: "Rendang.jpg"},
+            {n: "Sapi Lada Hitam", i: "Daging Sapi slice, Lada Hitam, Paprika.", img: "Sapi lada hitam.jpg"},
+            {n: "Soto Daging Kuah Santan", i: "Daging Sapi, Santan, Jahe, Serai, Emping.", img: "Soto kuah.jpg"},
+            {n: "Dendeng Balado", i: "Daging Sapi tipis, Cabai Merah Tumbuk kasar.", img: "Dendeng.jpg"},
+            {n: "Semur Sapi Betawi", i: "Daging Sapi, Kecap Manis, Kentang, Pala.", img: "Semur.jpg"},
+            {n: "Rawon Daging Sapi", i: "Daging Sapi, Kluwek, Tauge Kecil, Telur Asin.", img: "Rawon.jpg"},
+            {n: "Tongseng Sapi", i: "Daging Sapi, Kubis, Tomat, Santan Cair.", img: "Tongseng.jpg"},
+            {n: "Empal Gentong", i: "Daging Sapi, Jeroan, Santan, Daun Kucai.", img: "Empal gentong.jpg"},
+            {n: "Gulai Tunjang/Kaki Sapi", i: "Kaki Sapi, Santan, Bumbu Gulai, Cabai Merah.", img: "Tunjang.jpg"},
+            {n: "Beef Teriyaki ala Mama", i: "Daging Sapi slice, Saus Teriyaki, Wijen.", img: "Rendang.jpg"}
+        ]},
+        kambing: { t: "10 Olahan Daging Kambing", v: [
+            {n: "Sate Kambing Empuk", i: "Daging Kambing, Lemak, Kecap, Bumbu Celup.", img: "Sate.jpg"},
+            {n: "Gulai Kambing", i: "Daging Kambing, Santan, Kayu Manis, Cengkeh.", img: "Gule kambing.jpg"},
+            {n: "Tongseng Kambing", i: "Daging Kambing, Kol, Tomat, Kecap Manis.", img: "Tongseng wedus.jpg"},
+            {n: "Kambing Bakar Maranggi", i: "Daging Kambing, Ketumbar, Gula Merah.", img: "Kambing bakar.jpg"},
+            {n: "Tengkleng Kambing", i: "Tulang & Daging Kambing, Kuah Bening Gurih.", img: "Tengkleng.jpg"},
+            {n: "Nasi Kebuli Kambing", i: "Daging Kambing, Beras Basmati, Minyak Samin.", img: "Nasi.jpg"},
+            {n: "Krengsengan Kambing", i: "Daging Kambing, Petis Udang, Kecap, Cabai.", img: "Krengsengan.jpg"},
+            {n: "Sop Kambing Bening", i: "Daging Kambing, Wortel, Kentang, Jahe.", img: "Sop.jpg"},
+            {n: "Kambing Masak Kurma", i: "Daging Kambing, Santan, Rempah Kurma (Aceh).", img: "Kurma.jpg"},
+            {n: "Kambing Goreng Bumbu Kecap", i: "Daging Kambing Goreng, Kecap, Rawit.", img: "Asu.jpg"}
+        ]},
+        sawi: { t: "10 Olahan Sawi", v: [
+            {n: "Cah Sawi Putih Bakso", i: "Sawi Putih, Bakso, Saus Tiram.", img: "Sawi putih.jpg"},
+            {n: "Sayur Bening Sawi", i: "Sawi Hijau, Jagung, Bawang Merah.", img: "Bening sawi.jpg"},
+            {n: "Tumis Sawi Telur", i: "Sawi, Telur Orak-arik, Cabai.", img: "Sawi telur.jpg"},
+            {n: "Capcay Sawi Lengkap", i: "Sawi, Wortel, Kembang Kol, Ayam.", img: "Capcai.jpg"},
+            {n: "Sawi Gulung Daging", i: "Sawi Putih, Daging Giling, Wortel.", img: "Sawi gulung.jpg"},
+            {n: "Bobor Sawi Gurih", i: "Sawi Hijau, Santan, Kencur.", img: "Bobor.jpg"},
+            {n: "Sawi Masak Tahu", i: "Sawi Putih, Tahu Kuning, Cabai Hijau.", img: "Campur.jpg"},
+            {n: "Urap Sawi Kelapa", i: "Sawi Hijau, Kelapa Parut, Kencur.", img: "Urap.jpg"},
+            {n: "Sawi Saus Bawang Putih", i: "Sawi Hijau, Bawang Putih Goreng, Saus Tiram.", img: "Cha.jpg"},
+            {n: "Kimchi Sawi Ala Mama", i: "Sawi Putih, Bubuk Cabai, Jahe, Kecap Ikan.", img: "kimchi.jpg"}
+        ]},
+        telur: { t: "10 Olahan Telur", v: [
+            {n: "Telur Dadar Padang", i: "Telur, Daun Bawang, Cabai Giling.", img: "Telur.jpg"},
+            {n: "Telur Balado Merah", i: "Telur Rebus, Sambal Merah Pedas.", img: "Telur balado.jpg"},
+            {n: "Semur Telur Tahu", i: "Telur Rebus, Kecap Manis, Kayu Manis.", img: "Semur telur tahu.jpg"},
+            {n: "Telur Ceplok Kecap", i: "Telur Ceplok, Bawang Bombay, Kecap.", img: "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=400"},
+            {n: "Puyuh Bumbu Bali", i: "Telur Puyuh, Cabai, Terasi, Jeruk Nipis.", img: "Telur puyuh.jpg"},
+            {n: "Orak Arik Telur Sayur", i: "Telur, Buncis, Wortel, Lada.", img: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400"},
+            {n: "Telur Kukus Sutra", i: "Telur Kocok, Kaldu Ayam, Daun Bawang.", img: "Telur tahu.jpg"},
+            {n: "Fuyunghai Telur", i: "Telur, Kubis, Wortel, Saus Asam Manis.", img: "Fuyunghai.jpg"},
+            {n: "Telur Masak Habang", i: "Telur Rebus, Cabai Kering, Gula Merah.", img: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400"},
+            {n: "Telur Dadar Gulung Jepang", i: "Telur, Wortel, Daun Bawang, Kaldu.", img: "Telur jepang.jpg"}
+        ]},
+        aci: { t: "10 Jajanan Aci", v: [
+            {n: "Cilok Kacang", i: "Aci, Terigu, Saus Kacang.", img: "Cilok.jpg"},
+            {n: "Cireng Salju", i: "Aci, Daun Bawang, Bawang Putih.", img: "Cireng.jpg"},
+            {n: "Cilung Gulung", i: "Aci Cair, Telur, Tusuk Sate.", img: "Cilung.jpg"},
+            {n: "Cimol Bojot", i: "Aci Goreng, Minyak Cabai, Bawang Goreng.", img: "Cimol.jpg"},
+            {n: "Cimin (Aci Mini)", i: "Aci Kotak, Telur Kocok, Bumbu Tabur.", img: "Cimin.jpg"},
+            {n: "Bakso Aci Mercon", i: "Aci, Kaldu Pedas, Pilus Cikur.", img: "Aci mercon.jpg"},
+            {n: "Batagor Aci", i: "Aci, Tahu, Pangsit, Saus Kacang.", img: "Batagor.jpg"},
+            {n: "Aci Ngambang", i: "Aci Bulat, Kuah Pedas Jeruk Nipis.", img: "Cipuk.jpg"},
+            {n: "Krupuk Aci Goreng", i: "Aci, Ikan Giling, Ketumbar.", img: "Kurci.jpg"},
+            {n: "Cipuk (Cireng Kerupuk)", i: "Kerupuk Hancur, Aci, Daun Bawang.", img: "Cipuk.jpg"}
+        ]},
+        bakso: { t: "10 Olahan Bakso", v: [
+            {n: "Bakso Kuah Spesial", i: "Bakso Sapi, Kaldu, Mie, Seledri.", img: "Bakso kuah.jpg"},
+            {n: "Bakso Penyet", i: "Bakso Goreng, Sambal Bawang Hot.", img: "Bakso penyet.jpg"},
+            {n: "Tumis Bakso Kecap", i: "Bakso, Kecap Manis, Bawang Bombay.", img: "Tumis bakso.jpg"},
+            {n: "Bakso Bakar Madu", i: "Bakso, Madu, Mentega, Kecap.", img: "Bakso bakar.jpg"},
+            {n: "Oseng Bakso Mercon", i: "Bakso, Cabai Rawit, Daun Jeruk.", img: "Oseng bakso.jpg"},
+            {n: "Tahu Bakso Kukus", i: "Tahu, Adonan Bakso, Sapi/Ayam.", img: "Bakso kukus.jpg"},
+            {n: "Bakso Saus Asam Manis", i: "Bakso, Nanas, Saus Tomat, Wortel.", img: "Bakso asam.jpg"},
+            {n: "Sop Bakso Makaroni", i: "Bakso, Makaroni, Wortel, Kentang.", img: "Bakso makaroni.jpg"},
+            {n: "Mie Goreng Bakso", i: "Mie, Bakso, Sawi, Telur, Kecap.", img: "Bakso mie.jpg"},
+            {n: "Bakso Goreng Mekar", i: "Bakso Sapi/Ayam, Tepung, Minyak.", img: "Bakso mekar.jpg"}
+        ]}
+    };
+
+    const categories = [
+        {k:'ayam', n:'Ayam', e:'🍗'}, {k:'ikan', n:'Ikan', e:'🐟'},
+        {k:'cumi', n:'Cumi', e:'🦑'}, {k:'sapi', n:'Daging Sapi', e:'🥩'},
+        {k:'kambing', n:'Daging Kambing', e:'🐐'}, {k:'sawi', n:'Sayur Sawi', e:'🥬'},
+        {k:'telur', n:'Telur', e:'🥚'}, {k:'aci', n:'Jajanan Aci', e:'🍡'},
+        {k:'bakso', n:'Bakso', e:'🍲'}
+    ];
+
+    const mainMenu = document.getElementById('main-menu');
+    categories.forEach(c => {
+        mainMenu.innerHTML += `<div class="menu-card" onclick="openMenu('${c.k}')"><span>${c.e}</span><b>${c.n}</b></div>`;
+    });
+
+    const music = document.getElementById('bgMusic');
+    function toggleMusic() {
+        if(music.paused) { music.play(); document.getElementById('musicIcon').innerText = "🔊"; }
+        else { music.pause(); document.getElementById('musicIcon').innerText = "🔇"; }
+    }
+
+    function openMenu(cat) {
+        const data = recipes[cat];
+        document.getElementById('cat-title').innerText = data.t;
+        const list = document.getElementById('recipe-list');
+        list.innerHTML = '';
+        data.v.forEach(r => {
+            list.innerHTML += `
+                <div class="recipe-item">
+                    <img src="${r.img}" class="recipe-img">
+                    <div class="recipe-info">
+                        <span class="recipe-name">${r.n}</span>
+                        <p class="recipe-desc"><b>🛒 Bahan:</b> ${r.i}</p>
+                    </div>
+                </div>`;
+        });
+        document.getElementById('home').classList.remove('active');
+        document.getElementById('detail').classList.add('active');
+    }
+
+    function closeMenu() {
+        document.getElementById('detail').classList.remove('active');
+        document.getElementById('home').classList.add('active');
+    }
+</script>
+</body>
+</html>
